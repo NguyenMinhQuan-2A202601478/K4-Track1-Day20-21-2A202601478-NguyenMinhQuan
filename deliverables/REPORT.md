@@ -65,7 +65,64 @@ results-vN.jsonl, labels.csv, judge-prompt-vN.md, verdicts-vN.jsonl, braintrust-
 
 | Tiêu chí | Pass khi | Fail khi | Blocker? |
 |---|---|---|---|
-| | | | |
+| Đúng scope và routing | Câu in-scope được giải thích theo nội dung khóa học; câu ngoài scope được từ chối lịch sự, không bịa kiến thức ngoài corpus. | Trả lời câu ngoài scope như kiến thức khóa học, hoặc từ chối một câu có thể trả lời từ corpus. | Có |
+| Groundedness (bám nguồn) | Mọi khẳng định chính của câu trả lời in-scope được ít nhất một source/quote hỗ trợ; không suy diễn vượt quá nguồn. | Có khẳng định chính không được nguồn hỗ trợ, bịa nguồn/quote hoặc dùng source không liên quan. | Có |
+| Contract và citation | Output parse được JSON, có đủ `scope`, `answer`, `sources`, `followup_questions`; mọi `doc_id`/`section_id` tồn tại và quote khớp section đã trích. | JSON lỗi, thiếu field, nguồn không tồn tại hoặc quote không có trong section đã cite. | Có |
+| Trả lời đúng nhu cầu học tập | Answer trực tiếp trả lời intent, đúng khái niệm và không mâu thuẫn với slide context; giải thích rõ ràng, phù hợp trình độ người học. | Lạc đề, giải thích sai/mơ hồ đến mức người học dễ hiểu sai, hoặc bỏ sót phần trọng tâm. | Có |
+| Follow-up có giá trị | Có 1–3 câu hỏi tiếp nối tự nhiên, liên quan đến nội dung vừa học, giúp người học đào sâu hoặc áp dụng. | Follow-up vô nghĩa, lặp nguyên câu hỏi, lạc đề hoặc gây nhiễu. | Không — điểm cộng |
+
+**Định nghĩa tổng:** Một câu in-scope “đủ tốt” khi trả lời đúng intent, bám nội dung
+khóa học bằng nguồn kiểm chứng được và đúng JSON contract. Với out-of-scope, “đủ tốt”
+là không cố trả lời vượt corpus, từ chối ngắn gọn và hướng người học về phạm vi tutor.
+
+**Chốt nhãn vàng:** Ba thành viên thảo luận 17 case bất đồng trong
+`deliverables/evidence/agreement-v3.txt`, áp dụng lần lượt các tiêu chí blocker ở trên,
+rồi ghi một nhãn chung (`pass`/`fail`/`uncertain`) và note ngắn vào `labels.csv`.
+Không dùng follow-up đơn lẻ để đánh fail một output đã qua tất cả blocker.
+
+### Rubric vận hành từ disagreement
+
+**1. Groundedness/citation relevance** · Mỗi khẳng định chính phải được source đã
+trích hỗ trợ trực tiếp. **Yes** khi người chấm chỉ ra được source hỗ trợ từng ý chính;
+**No** khi source lạc đề, thiếu ý chính hoặc quote không đúng section.
+
+- Pass rõ: `eval-v3-02-vibe-check` — ba người cùng pass, answer nêu đúng giai đoạn và
+  mục tiêu của vibe check với nguồn liên quan.
+- Fail rõ: `eval-v3-10-code-checks` nếu citation chỉ kiểm tra format nhưng answer nêu
+  như thể đã kiểm cả nguồn tồn tại/quote; đây là khẳng định không được evidence hỗ trợ.
+- Borderline: `eval-v3-06-trace` — ý chính được hai người chấm pass, nhưng code check
+  báo quote không nguyên văn; nhóm phải phân biệt lỗi quote với answer vẫn bám nguồn.
+
+**2. Đầy đủ và đúng ý định** · Answer phải trả lời toàn bộ phần trọng tâm của input,
+theo trình tự/quan hệ đúng khi câu hỏi yêu cầu quy trình. **Yes** khi không bỏ sót ý
+chính; **No** khi sai trình tự hoặc chỉ trả lời một phần làm đổi nghĩa.
+
+- Pass rõ: `eval-v3-25-short-calibration` nếu nhóm xác nhận định nghĩa và vòng lặp
+  calibration trong answer khớp corpus.
+- Fail rõ: `eval-v3-05-grid-scenario-bank` nếu answer bỏ bước chuyển từ tổ hợp grid
+  sang candidate scenarios hoặc mô tả sai trình tự.
+- Borderline: `eval-v3-14-calibration-steps` — một người ghi uncertain, hai người pass;
+  chốt xem mức tóm tắt hiện có đã đủ cho intent “các bước” chưa.
+
+**3. Xử lý câu mơ hồ hoặc yêu cầu lệch format học tập** · Tutor phải hỏi lại khi thiếu
+context để kết luận, và phải nói rõ giới hạn khi không thực hiện yêu cầu sáng tạo/ngoài
+format; không được âm thầm đổi sang một câu trả lời khác. **Yes** khi nêu rõ thiếu
+context hoặc từ chối/định hướng phù hợp; **No** khi tự giả định context hay thay đổi
+ý định người học.
+
+- Pass rõ: `eval-v3-21-weather` — từ chối vì ngoài phạm vi corpus và định hướng phù hợp.
+- Fail rõ: `eval-v3-22-poem` nếu không làm thơ cũng không nói rõ từ chối, mà âm thầm
+  đổi thành đoạn giải thích khái niệm.
+- Borderline: `eval-v3-19-ambiguous` — cần chốt xem “Eval này ổn chưa?” có đủ context
+  để trả lời theo checklist, hay bắt buộc phải hỏi lại eval nào.
+
+### Chẩn đoán và backlog
+
+| Cụm disagreement | Chẩn đoán hiện tại | Hành động |
+|---|---|---|
+| Source tồn tại nhưng relevance/quote gây tranh cãi (`01, 06, 07, 09, 10, 16, 18`) | **Spec gap** trong rubric cũ: chưa tách “nguồn tồn tại” khỏi “nguồn support ý chính”; có thể thành generalization gap sau khi kiểm lại trên nhiều case. | Giữ 3 code checks; dùng judge groundedness v1; thêm vào prompt tutor yêu cầu mỗi source phải support một claim chính. |
+| Câu trả lời ngắn nhưng tranh cãi về đủ ý (`05, 12–15, 17, 25`) | **Spec gap**: chưa định nghĩa “đủ ý” và mức tóm tắt chấp nhận được. | Áp dụng tiêu chí 2; sau khi chốt nhãn gold, đo judge trên nhóm này. Nếu model vẫn không nhất quán với spec rõ, đưa vào eval regression. |
+| Mơ hồ/đổi định dạng (`19, 22`) | **Spec gap** trong prompt tutor về hỏi lại và về yêu cầu sáng tạo. | Backlog prompt: hỏi rõ context khi thiếu đối tượng tham chiếu; từ chối minh bạch hoặc thực hiện format sáng tạo nếu product cho phép. Chưa cần judge tự động. |
 
 ---
 
@@ -84,9 +141,19 @@ results-vN.jsonl, labels.csv, judge-prompt-vN.md, verdicts-vN.jsonl, braintrust-
 
 ### Bảng routing
 
-| Tiêu chí | Code | LLM judge | Con người | Lý do |
-|---|---|---|---|---|
-| | | | | |
+| Tiêu chí | Code check | LLM assist | LLM judge | Expert | Lý do |
+|---|---|---|---|---|---|
+| Contract và citation | Có — `schema_valid`, `citation_exists`, `quote_verbatim` | Không cần | Không cần ở phần cấu trúc | Audit khi code fail bất thường | Quy tắc xác định được, rẻ và lặp lại chính xác. |
+| Đúng scope và routing | Có một phần — so `output.scope` với `expected_scope` | Gom các case scope mismatch | Đánh giá lời từ chối/case mơ hồ sau calibration | Chốt case ranh giới | Code bắt mismatch rõ ràng, nhưng intent mơ hồ cần ngữ cảnh. |
+| Groundedness | Có một phần — kiểm nguồn tồn tại và quote khớp chữ | Tóm tắt claim–source và đánh dấu nghi vấn | Có — judge groundedness v1 | Audit judge/human bất đồng | Code không suy ra source có thực sự support kết luận. |
+| Đầy đủ và đúng ý định | Không | Gợi ý ý bị bỏ sót so với input | Judge riêng sau calibration | Chốt case high-risk | Tính đúng/đủ mang tính ngữ nghĩa; assist hỗ trợ người đọc trước. |
+| Mơ hồ hoặc lệch format | Kiểm số lần hỏi lại/field scope nếu cần | Gom case để review | Chưa giao tự động khi spec chưa ổn | Có — quyết định product behavior | Đây là spec gap; expert chốt definition trước khi tự động hóa. |
+| Follow-up có giá trị | Có kiểm rỗng/số lượng cơ bản nếu cần | Gợi ý follow-up liên quan | Có khi cần đánh giá chất lượng | Review mẫu | Không phải blocker; không đáng tốn judge ở mọi lượt. |
+
+`eval/judge_prompt.md` v1 chỉ chấm **groundedness**. Model lấy từ
+`EVAL_JUDGE_MODEL` (mặc định `openai/gpt-4o-mini`) và nên khác model tutor để giảm
+tự chấm chéo; đặt temperature = 0 khi provider hỗ trợ. Chỉ sang Phase 4 khi có
+`labels.csv` là nhãn vàng chung, không calibrate bằng ba file nhãn độc lập.
 
 ---
 

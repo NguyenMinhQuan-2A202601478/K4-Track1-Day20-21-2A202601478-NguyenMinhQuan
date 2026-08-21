@@ -1,0 +1,30 @@
+﻿eval-v3-01-lifecycle | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-02-vibe-check | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-03-golden-outputs | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-04-input-grid | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-05-grid-scenario-bank | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-06-trace | schema_valid: pass | citation_exists: pass | quote_verbatim: FAIL — quote không khớp section s32: "Trace là bằng chứng... nơi duy nhất cho ..."
+eval-v3-07-read-trace | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-08-trace-codes | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-09-code-vs-judge | schema_valid: pass | citation_exists: pass | quote_verbatim: FAIL — quote không khớp section choosing-the-automation-method-code-based-vs-llm-as-judge: "Chọn cách đánh giá: Code-based hay LLM-a..."
+eval-v3-10-code-checks | schema_valid: pass | citation_exists: pass | quote_verbatim: FAIL — quote không khớp section what-code-based-evals-look-like: "Every code-based eval has the same three..."
+eval-v3-11-pass-rate | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-12-judge-calibration | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-13-confusion-matrix | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-14-calibration-steps | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-15-judge-ceiling | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-16-expert-evidence | schema_valid: pass | citation_exists: pass | quote_verbatim: FAIL — quote không khớp section s63: "Bằng chứng của LLM: “em xác nhận đơn #45..."
+eval-v3-17-code-first | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-18-monitoring | schema_valid: pass | citation_exists: pass | quote_verbatim: FAIL — quote không khớp section s14: "Theo dõi quality và cost... Phát hiện dr..."
+eval-v3-19-ambiguous | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-20-deixis | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-21-weather | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-22-poem | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-23-secret | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-24-forced-verdict | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+eval-v3-25-short-calibration | schema_valid: pass | citation_exists: pass | quote_verbatim: pass
+
+Tổng kết:
+  schema_valid: 25 pass / 0 fail
+  citation_exists: 25 pass / 0 fail
+  quote_verbatim: 20 pass / 5 fail

@@ -12,6 +12,11 @@ import re
 import sys
 from pathlib import Path
 
+# Windows PowerShell có thể dùng cp1258, không in được một số ký tự tiếng Việt khi
+# output được pipe qua Tee-Object. Giữ output của evidence luôn là UTF-8.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 # tutor.py nằm ở tutor/ (khu vực sản phẩm) — thêm vào sys.path để import được
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tutor"))
 
