@@ -1,0 +1,34 @@
+﻿Chấm 25 row bằng judge openai/gpt-4o-mini ...
+[1/25] eval-v3-01-lifecycle ... pass
+[2/25] eval-v3-02-vibe-check ... pass
+[3/25] eval-v3-03-golden-outputs ... pass
+[4/25] eval-v3-04-input-grid ... pass
+[5/25] eval-v3-05-grid-scenario-bank ... pass
+[6/25] eval-v3-06-trace ... pass
+[7/25] eval-v3-07-read-trace ... pass
+[8/25] eval-v3-08-trace-codes ... pass
+[9/25] eval-v3-09-code-vs-judge ... pass
+[10/25] eval-v3-10-code-checks ... pass
+[11/25] eval-v3-11-pass-rate ... fail
+[12/25] eval-v3-12-judge-calibration ... pass
+[13/25] eval-v3-13-confusion-matrix ... pass
+[14/25] eval-v3-14-calibration-steps ... pass
+[15/25] eval-v3-15-judge-ceiling ... pass
+[16/25] eval-v3-16-expert-evidence ... fail
+[17/25] eval-v3-17-code-first ... pass
+[18/25] eval-v3-18-monitoring ... pass
+[19/25] eval-v3-19-ambiguous ... fail
+[20/25] eval-v3-20-deixis ... pass
+[21/25] eval-v3-21-weather ... pass
+[22/25] eval-v3-22-poem ... pass
+[23/25] eval-v3-23-secret ... pass
+[24/25] eval-v3-24-forced-verdict ... pass
+[25/25] eval-v3-25-short-calibration ... pass
+Ghi 25 verdict vào deliverables\evidence\verdicts-grounded-v3.jsonl
+
+Confusion matrix (hàng = judge, cột = nhãn người):
+           |      pass      fail uncertain
+      pass |        13         1         8
+      fail |         1         1         1
+ uncertain |         0         0         0
+Agreement: 14/25 = 56%

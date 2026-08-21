@@ -1,10 +1,9 @@
-# REPORT — Eval loop A→Z: VLearn AI Tutor
+# REPORT — AI Evaluation Lab: VLearn AI Tutor
 
-> Báo cáo cá nhân của Đào Văn Đạt — MSSV 2A202601302. Evidence dùng chung của nhóm, nhưng phần nhận xét và quyết định dưới đây là phần tôi trực tiếp thực hiện.
 
 ## Vai trò cá nhân
 
-Tôi điều phối pipeline eval, xây dựng dataset-v3, chạy tutor và code checks, tổng hợp nhãn của Nguyễn Minh Quân và Huy, chạy ba vòng calibration Judge, adjudication mismatch và quyết định gate.
+Xây dựng và kiểm tra pipeline evaluation, chốt evidence cho dataset v3, thực hiện code checks, tổng hợp nhãn người, chạy calibration judge và đưa ra quyết định gate.
 
 ## 1. Input Grid
 
@@ -14,7 +13,7 @@ Quyết định: giữ 25 scenario để có happy path, challenge, high-risk, u
 
 ## 2. Dataset v3
 
-Evidence: `evidence/dataset_backup.jsonl` và `evidence/results-v3.jsonl`.
+Evidence: `evidence/dataset-v1.jsonl` và `evidence/results-v3.jsonl`.
 
 - 25 câu: 19 in-scope, 4 out-of-scope, 2 unclear.
 - Set type: 11 representative, 6 challenge, 6 high-risk, 2 out-of-scope.
@@ -40,62 +39,74 @@ Nhãn ban đầu dùng majority vote 2/3. Sau đó tôi thực hiện adjudicati
 |---|---:|---:|---:|---|
 | JSON/schema | ✓ |  |  | Deterministic và lặp lại được |
 | Citation tồn tại/quote khớp | ✓ |  |  | Kiểm tra bằng rule và corpus |
-| Groundedness/completeness |  | ✓ | ✓ audit | Cần hiểu ngữ nghĩa |
-| Scope/ambiguous |  | ✓ | ✓ | Cần xét context và rủi ro |
-| Safety/adversarial | ✓ | ✓ | ✓ high-risk | Dùng nhiều lớp kiểm soát |
+| Groundedness |  | ✓ assist | ✓ quyết định | Judge chưa ổn định với nhãn uncertain |
+| Follow-up/scope mơ hồ | ✓ rule scope | ✓ assist | ✓ audit | Follow-up v2 tốt nhưng cần holdout |
+| Safety/adversarial | ✓ |  | ✓ high-risk | Không giao hoàn toàn cho judge |
 
-Judge dùng `openai/gpt-4.1-mini`, khác model tutor để giảm chấm chéo. Các run đã được log lên Braintrust.
+Judge dùng `openai/gpt-4o-mini`. Groundedness chỉ được dùng để gom evidence/case nghi ngờ; follow-up cần audit vì dataset calibration có rất ít case fail.
 
-Link theo dõi trace: [Braintrust — AI Evaluation Logs](https://www.braintrust.dev/app/daovandat/p/ai-evaluation/logs)
+Link theo dõi trace: [Braintrust — Track 1 Day 21 Logs](https://www.braintrust.dev/app/Henry%20Ng/p/track1-day21-2A202601478/logs)
 
-## 5. Calibration Report
+## 5. Calibration report
 
-Ba thành viên chấm độc lập 25 row; agreement ban đầu là 8/25 = 32%.
+Ba người chấm độc lập 25 row; đồng thuận hoàn toàn là 8/25 = **32%**. Đồng thuận từng cặp: Quân–Huy 52%, Quân–Đạt 40%, Huy–Đạt 60%. Bất đồng tập trung ở groundedness và câu mơ hồ; nhóm giữ nhãn `uncertain` thay vì ép pass/fail, rồi chốt nhãn vàng: 12 pass, 3 fail, 10 uncertain.
 
-| Vòng | Thay đổi | Agreement |
-|---|---|---:|
-| v1 | Groundedness cơ bản | 72% |
-| v2 | Bổ sung completeness và ambiguous-context rules | 76% |
-| v3 | Đưa expected behavior vào Judge context | 60% trước adjudication; 84% sau adjudication |
+| Evaluator | Vòng | Agreement | Tốt nhận đúng | Xấu bắt đúng | Kết luận |
+| --- | --- | ---: | ---: | ---: | --- |
+| Groundedness (`gpt-4o-mini`) | v1 | 52% | 11/14 | 1/2 | Quá dễ với uncertain; có enum invalid. |
+| Groundedness (`gpt-4o-mini`) | v2 | 60% | 14/14 | 1/2 | Bỏ sót 8/9 uncertain. |
+| Groundedness (`gpt-4o-mini`) | v3 | 56% | 13/14 | 1/2 | Không ổn định; chuyển LLM assist. |
+| Follow-up (`gpt-4o-mini`) | v1 | 96% | 23/23 | 1/2 | Bỏ sót case thơ/out-of-scope. |
+| Follow-up (`gpt-4o-mini`) | v2 | 100% | 23/23 | 2/2 | Chỉ là calibration fit; 2 fail quá ít và đã có trong prompt. |
 
-Sau adjudication, nhãn cuối được điều chỉnh thành 12 pass, 3 fail, 10 uncertain. Ba case được chốt fail là `eval-v3-10-code-checks`, `eval-v3-19-ambiguous` và `eval-v3-22-poem`.
+Groundedness không đạt mức tin cậy để auto-gate. Follow-up chỉ dùng LLM assist có audit/holdout; 100% trên dataset này không được diễn giải là hoàn hảo vì nguy cơ leakage/overfit.
 
-So với verdict v3 hiện có, còn 4 mismatch: `eval-v3-05-grid-scenario-bank`, `eval-v3-10-code-checks`, `eval-v3-18-monitoring`, `eval-v3-22-poem`. Agreement vẫn là 21/25 = 84%.
+Code checks v4 trên 25 outputs: schema 25/25, citation tồn tại 25/25, quote nguyên văn 20/25, scope khớp expected 21/25, in-scope có source 25/25. Năm quote fail là lỗi tutor theo spec (system prompt yêu cầu quote nguyên văn), không sửa nhãn để làm rule xanh.
 
-Kết luận: Judge phù hợp để triage và phát hiện case cần review, chưa nên thay thế con người ở completeness, ambiguity và các case high-risk.
-
-Evidence: `judge-prompt-v1.md`, `judge-prompt-v2.md`, `judge-prompt-v3.md`, `verdicts-v1.jsonl`, `verdicts-v2.jsonl`, `verdicts-v3.jsonl`, `braintrust-link.md`.
+Evidence: `evidence/code-checks-v4.txt`, `evidence/judge-grounded-v*-summary.txt`, `evidence/judge-followup-v*-summary.txt`, `evidence/verdicts-*.jsonl`.
 
 ## 6. Scorecard & Gate
 
-| Nhãn cuối | Số lượng | Tỷ lệ |
-|---|---:|---:|
-| Pass | 12 | 48% |
-| Fail | 3 | 12% |
-| Uncertain | 10 | 40% |
+Threshold v4 đã được ghi trước khi đánh giá candidate tiếp theo: schema/citation/in-scope sources 100%; quote và scope >=96% (tối đa 1/25 fail); 0 safety/adversarial fail; P95 latency <=7 giây; cost/25 <=$0.025.
 
-Tutor v3 có 25 row, 124.809 tokens, chi phí khoảng `$0.021926`, latency trung bình 5,11 giây/câu. Judge v3 có 25 verdicts và agreement 84% sau adjudication.
+| Metric candidate v3 | Kết quả | Trạng thái |
+| --- | ---: | --- |
+| Quote nguyên văn | 20/25 = 80% | Fail |
+| Scope khớp expected | 21/25 = 84% | Fail |
+| Schema/citation/in-scope sources | 100% | Pass |
+| Nhãn người cuối | 12 pass, 3 fail, 10 uncertain | Chưa đủ tin cậy |
+| P95 latency | 6.63s | Pass |
+| Tổng cost/25 traces | $0.021926 | Pass |
 
-**HOLD** — chưa ship vì có 3 case fail và 40% case uncertain. Điều kiện mở gate: xử lý các blocker, cải thiện retrieval/answer completeness và chạy regression eval mới.
+Đã đọc tay ba trace fail: `eval-v3-10-code-checks` (citation chỉ đúng hình thức), `eval-v3-19-ambiguous` (không hỏi rõ ngữ cảnh), `eval-v3-22-poem` (sai route out-of-scope). Chưa có candidate v4, nên chưa thể tuyên bố cải thiện hay có regression list v3→v4.
 
 ## 7. Verdict + Report cuối
 
-### 1. Dataset
+### 1. Dataset đã đánh giá
 
-Đã đánh giá dataset-v3 gồm 25 câu về lifecycle, golden outputs, input grid, trace, code eval, calibration, monitoring, ambiguous, out-of-scope và adversarial.
+Dataset v3 có 25 traces về lifecycle, code eval, calibration, monitoring, ambiguity, out-of-scope và adversarial. Coverage gồm representative/challenge/high-risk; blind spot là hội thoại nhiều lượt, tiếng Anh/pha ngôn ngữ và corpus lớn.
 
-### 2. Đồng thuận con người
+### 2. Quá trình đồng thuận con người
 
-Ba thành viên chấm độc lập. Sau majority vote và adjudication của tôi, nhãn cuối là 12 pass, 3 fail, 10 uncertain.
+Human–human agreement toàn bộ là 32%. Mâu thuẫn lớn nhất nằm ở groundedness và ambiguity. Nhóm xử lý bằng rubric quan sát được, tách scope/follow-up/groundedness và giữ nhãn `uncertain` làm tín hiệu cần review.
 
-### 3. LLM Judge
+### 3. LLM judge
 
-Judge chạy qua ba vòng prompt. Vòng v3 đạt 84% agreement sau adjudication và phù hợp cho triage, nhưng chưa đủ tin cậy để tự động quyết định toàn bộ case.
+Judge là `openai/gpt-4o-mini`. Groundedness sau 3 vòng đạt 52% → 60% → 56%, chỉ bắt 1/2 output xấu ở v2/v3 và thường coi uncertain là pass; không calibrate đủ cho auto-gate. Follow-up đạt 96% rồi 100%, nhưng số fail quá ít và nằm trong examples calibration; chỉ dùng để hỗ trợ/audit.
 
-### 4. Routing
+### 4. Bảng quyết định routing
 
-Code xử lý schema/citation; Judge xử lý groundedness/completeness; con người quyết định cuối ở ambiguous, high-risk và mismatch.
+| Tiêu chí | Ngưỡng | Routing | Lý giải |
+| --- | ---: | --- | --- |
+| Schema/citation/sources | 100% | Code | Deterministic, đạt 25/25. |
+| Quote nguyên văn | >=96% | Code + sửa tutor | Hiện 80%, vi phạm product spec. |
+| Scope | >=96% | Code + Expert review | Hiện 84%, sai route ở input khó. |
+| Groundedness | Human review | LLM assist | Judge v3 chỉ agreement 56%. |
+| Follow-up | Audit trên holdout | LLM assist | v2 100% nhưng có nguy cơ overfit. |
+| Safety/secret | 0 fail | Expert + guardrail | High-stakes. |
 
-### 5. Verdict và bước tiếp theo
+### 5. Verdict + bước tiếp theo
 
-**HOLD.** Cần fix `eval-v3-10-code-checks`, xem lại cách xử lý `eval-v3-19-ambiguous`, giữ scope với `eval-v3-22-poem`, sau đó chạy regression eval và review lại các case uncertain.
+**HOLD — không ship candidate v3.** Hai gate critical chưa đạt: quote nguyên văn 80% và scope 84%, đều dưới ngưỡng 96%; groundedness judge cũng chưa đủ tin để làm gate.
+
+Bước tiếp theo theo thứ tự chi phí thấp: sửa prompt/logic route cho ambiguous và out-of-scope; ép quote lấy đúng đoạn corpus đã cite; tạo candidate v4; chạy code checks trước; human review groundedness; đánh giá follow-up trên holdout mới. Chỉ cân nhắc ship có điều kiện khi các gate critical đều pass và không regression ở high-risk/out-of-scope.

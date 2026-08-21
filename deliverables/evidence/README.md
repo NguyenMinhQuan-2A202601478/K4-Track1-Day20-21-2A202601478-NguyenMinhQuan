@@ -1,22 +1,14 @@
-# evidence/ — data thô của từng bước eval loop
+# Evidence index
 
-Thư mục này chứa **data thô** minh chứng cho mọi quyết định trong các file
-`deliverables/REPORT.md`. File làm việc sinh ra ở **root repo**
-(`dataset.jsonl`, `results.jsonl`, `verdicts.jsonl`, `labels.csv`) — chốt một vòng
-là copy vào đây ngay, đặt tên theo version, KHÔNG ghi đè vòng cũ.
+Mỗi phase phải có đầu vào, đầu ra và quyết định tương ứng trong `REPORT.md`. Không ghi đè artifact cũ: một run mới phải có version mới.
 
-Cần có đủ:
+| Phase | Input | Output thô | Quyết định/evidence |
+| --- | --- | --- | --- |
+| 1 | `dataset-v1.jsonl` | — | Coverage ghi trong REPORT mục 1–2. |
+| 2 | `results-v3.jsonl` | `labels-quan-v3.csv`, `labels-huy-v3.csv`, `labels-dat-v3.csv` | `agreement-v3.txt`, `labels-v3-final.csv`. |
+| 3 | Các nhãn bất đồng Phase 2 | — | Rubric và routing trong REPORT mục 3–4. |
+| 4 | `judge-prompt-grounded-v*.md`, `judge-prompt-followup-v*.md` | `verdicts-grounded-v*.jsonl`, `verdicts-followup-v*.jsonl` | Các summary và analysis calibration. |
+| 5 | `thresholds-v4.md` | `code-checks-v4.txt` | `scorecard-v3.md`. |
+| 6 | Toàn bộ evidence trên | — | Verdict HOLD trong REPORT mục 7. |
 
-| File | Lấy từ đâu | Là gì |
-|---|---|---|
-| `dataset-v1.jsonl` | `dataset.jsonl` (root) | Dataset nhóm chốt — đầu vào mọi lần chạy |
-| `results-v1.jsonl` (v2, v3...) | `results.jsonl` (root) | Output tutor thật: input, output JSON, `tool_calls`, tokens, cost từng câu |
-| `labels.csv` | Export từ `report.html` | Nhãn người của các thành viên (vòng chấm độc lập) |
-| `judge-prompt-v1.md` (v2...) | `eval/judge_prompt.md` | Prompt judge TỪNG VÒNG — copy trước mỗi lần sửa |
-| `verdicts-v1.jsonl` (v2...) | `verdicts.jsonl` (root) | Output judge từng vòng calibration |
-| `braintrust-link.md` | tự tạo | Link project Braintrust/LangSmith — trace mọi run |
-
-Số liệu trong mục 5 (Calibration Report) của `deliverables/REPORT.md` phải đối chiếu được với các
-file ở đây (confusion matrix, % agreement in ra từ `eval/judge.py`).
-
-Nhớ: chạy xong một vòng là copy ngay — cuối buổi mới gom là mất dấu các vòng trước.
+`braintrust-link.md` trỏ tới trace của các run tutor/judge. `results.jsonl`, `labels.csv` và `verdicts.jsonl` ở root chỉ là scratch; chỉ snapshot có version trong thư mục này mới là evidence nộp bài.

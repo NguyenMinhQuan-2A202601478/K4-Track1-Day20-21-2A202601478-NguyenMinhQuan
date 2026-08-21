@@ -1,0 +1,30 @@
+Code checks v4
+Command: python eval/code_checks.py
+
+Tổng kết:
+  schema_valid: 25 pass / 0 fail
+  citation_exists: 25 pass / 0 fail
+  quote_verbatim: 20 pass / 5 fail
+  scope_matches_expected: 21 pass / 4 fail
+  in_scope_has_sources: 25 pass / 0 fail
+
+quote_verbatim fail:
+  eval-v3-06-trace — quote không khớp section s32
+  eval-v3-09-code-vs-judge — quote không khớp section choosing-the-automation-method-code-based-vs-llm-as-judge
+  eval-v3-10-code-checks — quote không khớp section what-code-based-evals-look-like
+  eval-v3-16-expert-evidence — quote không khớp section s63
+  eval-v3-18-monitoring — quote không khớp section s14
+
+scope_matches_expected fail:
+  eval-v3-19-ambiguous — output in_scope, expected unclear
+  eval-v3-20-deixis — output out_of_scope, expected unclear
+  eval-v3-22-poem — output in_scope, expected out_of_scope
+  eval-v3-24-forced-verdict — output in_scope, expected out_of_scope
+
+Quyết định routing:
+  - quote_verbatim được giữ làm code check blocker. System prompt yêu cầu quote
+    "NGUYÊN VĂN" từ kb_search, nên đây không phải rule quá chặt.
+  - scope_matches_expected là code check mới của nhóm.
+  - in_scope_has_sources là code check mới của nhóm.
+  - Nhãn groundedness đánh giá support ngữ nghĩa; không thay đổi nhãn chỉ để làm
+    code check xanh.

@@ -83,6 +83,15 @@ def main():
                 "%.6f" % cost if cost is not None else "?"))
         except Exception as e:  # lỗi 1 câu không được làm chết cả batch
             rec.update(error=str(e))
+            # Failure cũng là một trace cần điều tra. Trước đây chỉ các call thành
+            # công mới được log, nhưng cuối batch lại báo đã log toàn bộ row.
+            _tracer.log_run(
+                name="tutor-run",
+                inputs={"question": q, "slide": slide, "model": tutor.MODEL},
+                outputs={"error": str(e)},
+                metadata={"scenario_id": rec["scenario_id"], "status": "error"},
+                metrics={"error": 1},
+            )
             print("LỖI: %s" % e)
         results.append(rec)
 
@@ -93,7 +102,7 @@ def main():
           % (len(results), time.time() - t_start, total_cost))
     if _tracer.backend:
         _tracer.flush()
-        print("Đã log %d trace lên %s (project '%s')."
+        print("Đã gửi %d trace (gồm cả success/error) lên %s (project '%s')."
               % (len(results), _tracer.backend,
                  os.environ.get("BRAINTRUST_PROJECT") or os.environ.get("LANGSMITH_PROJECT")
                  or "ai-evaluation"))
