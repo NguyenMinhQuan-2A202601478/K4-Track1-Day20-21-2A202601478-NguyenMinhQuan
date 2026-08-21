@@ -8,6 +8,7 @@ verdicts.jsonl
 # labels.csv
 # labels-*.csv
 report.html
+report*.html
 .venv
 
 run_eval_P-041.py
