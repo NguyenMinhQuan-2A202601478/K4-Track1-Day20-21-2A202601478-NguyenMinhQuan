@@ -12,11 +12,6 @@ phép trả lời dựa trên corpus bài học về AI evaluations; mọi nội
 ## Sources mà tutor trích dẫn
 {{sources}}
 
-## Tiêu chí kỳ vọng của scenario
-- Phạm vi: {{expected_scope}}
-- Expected behavior: {{expected_behavior}}
-- Rủi ro nếu trả lời sai: {{risk_if_fail}}
-
 ## Rubric chấm (groundedness)
 - PASS: answer trả lời trực tiếp phần chính của câu hỏi, không bỏ sót yêu cầu cốt lõi;
   mọi khẳng định chính đều được sources liên quan trực tiếp hỗ trợ; quote là trích
@@ -37,10 +32,6 @@ phép trả lời dựa trên corpus bài học về AI evaluations; mọi nội
   chung nhưng không đủ evidence để chấm thì dùng UNCERTAIN.
 - Một nguồn đúng cho một claim không tự động làm cả answer PASS nếu các claim chính
   khác chưa được nguồn hỗ trợ.
-- Đối chiếu answer với Expected behavior của scenario. Nếu thiếu một yêu cầu cốt lõi
-  được nêu trong Expected behavior thì không được chấm PASS; dùng UNCERTAIN nếu câu trả lời
-  vẫn đúng một phần nhưng thiếu bằng chứng hoặc thiếu nội dung, và dùng FAIL nếu có mâu thuẫn,
-  bịa đặt hoặc sai phạm vi rõ ràng.
 
 ## Yêu cầu output
 Chỉ trả về MỘT object JSON hợp lệ, không markdown fence, không text khác:

@@ -48,9 +48,16 @@ def build_judge_prompt(rec, template):
     answer = json.dumps(rec.get("output"), ensure_ascii=False, indent=2)
     sources = json.dumps(rec.get("output", {}).get("sources", []),
                          ensure_ascii=False, indent=2)
+    metadata = rec.get("metadata", {})
+    expected_behavior = metadata.get("expected_behavior", "")
+    expected_scope = rec.get("expected_scope", "")
+    risk = metadata.get("risk_if_fail", "")
     return (template.replace("{{input}}", input_text)
                     .replace("{{answer}}", answer)
-                    .replace("{{sources}}", sources))
+                    .replace("{{sources}}", sources)
+                    .replace("{{expected_scope}}", expected_scope)
+                    .replace("{{expected_behavior}}", expected_behavior)
+                    .replace("{{risk_if_fail}}", risk))
 
 def judge_row(rec, template):
     prompt = build_judge_prompt(rec, template)
@@ -86,8 +93,18 @@ def main():
         sys.exit("Không thấy results.jsonl — chạy python3 eval/run_eval.py trước.")
     if not tutor.get_api_key(JUDGE_MODEL):
         sys.exit("Chưa có API key cho judge model %s — xem .env.example." % JUDGE_MODEL)
+    # results.jsonl không luôn lưu expected_behavior; ghép lại từ dataset.jsonl
+    # để judge có tiêu chí kỳ vọng độc lập với chính câu trả lời của tutor.
+    dataset = {r["scenario_id"]: r for r in read_jsonl("dataset.jsonl")}
+    enriched = []
+    for r in results:
+        spec = dataset.get(r.get("scenario_id"), {})
+        merged = dict(r)
+        merged["expected_scope"] = spec.get("expected_scope", r.get("expected_scope", ""))
+        merged["metadata"] = spec.get("metadata", r.get("metadata", {}))
+        enriched.append(merged)
     chosen = set(sys.argv[1:])
-    rows = [r for r in results if not chosen or r["scenario_id"] in chosen]
+    rows = [r for r in enriched if not chosen or r["scenario_id"] in chosen]
     rows = [r for r in rows if "output" in r]  # bỏ row lỗi, không có gì để chấm
     template = open(PROMPT_PATH, encoding="utf-8").read()
     print("Chấm %d row bằng judge %s ..." % (len(rows), JUDGE_MODEL))

@@ -1,46 +1,53 @@
-# Eval Pack — quy cách bài nộp capstone AI Evaluation (Day 20–21)
+# LAB 21 — AI Evaluation
 
-"Chiếc hộp" chứa toàn bộ minh chứng eval loop của nhóm cho VLearn AI Tutor.
+## 1. Thông tin cá nhân
 
-**Nguyên tắc bắt buộc:** mỗi bước của eval loop phải nộp đủ ba thứ —
-**đầu vào** (bạn cho gì vào), **đầu ra** (hệ thống trả gì ra — file data thô),
-và **quyết định** (bạn kết luận/lựa chọn gì ở bước đó, VÌ SAO). Thiếu một trong ba,
-bước đó coi như chưa làm.
+- Họ và tên: **Đào Văn Đạt**
+- Mã sinh viên: **2A202601302**
+- Bài lab: **LAB 21 — AI Evaluation Capstone**
+- Sản phẩm được đánh giá: **VLearn AI Tutor**
+- Repo: `K4-Track1-Day20-21-2A202601302-DaoVanDat`
+- Model tutor: OpenAI model theo cấu hình `.env`
+- Model judge: `openai/gpt-4.1-mini`
+- Tracing: Braintrust
 
-## Cấu trúc repo nộp (tên thư mục/file cố định)
+## 2. Mục tiêu cá nhân
 
-```text
-Track1_Day21_MHV_HoVaTen/
-├── README.md                  # thông tin cá nhân + nhóm, đóng góp của tôi, verdict tóm tắt
-├── deliverables/              # bài nộp report A→Z + DATA THÔ
-│   ├── REPORT.md                  # 7 mục QUYẾT ĐỊNH theo phase (1 Input Grid … 7 Verdict) — viết bằng ngôn ngữ PM
-│   └── evidence/                  # DATA THÔ — input/output thật của từng bước chạy
-│       ├── dataset-v1.jsonl       # dataset nhóm chốt (đầu vào mọi lần chạy)
-│       ├── results-v1.jsonl       # output tutor (mỗi row: input, output JSON, tool_calls, tokens, cost)
-│       ├── labels.csv             # nhãn người của 3 thành viên (vòng chấm độc lập)
-│       ├── judge-prompt-v1.md     # judge prompt vòng 1
-│       ├── judge-prompt-v2.md     # judge prompt vòng 2 (diff với v1 phải giải thích trong mục 5 của REPORT.md)
-│       ├── verdicts-v1.jsonl      # output judge vòng 1
-│       ├── verdicts-v2.jsonl      # output judge vòng 2
-│       └── braintrust-link.md     # link project Braintrust/LangSmith — trace mọi run
-└── ai-support-log.md          # bạn dùng AI ở đâu, AI sai ở đâu, bạn quyết lại gì
-```
+Xây dựng một vòng đánh giá có thể kiểm chứng cho AI Tutor: thiết kế dataset, chạy tutor, kiểm tra bằng code, thu thập nhãn người, calibrate LLM Judge và đưa ra quyết định gate dựa trên bằng chứng.
 
-Quy ước phiên bản: mỗi lần chạy lại là một version mới — `results-v2.jsonl`,
-`verdicts-v3.jsonl`... Không ghi đè file cũ; calibration report cần đối chiếu được
-từng vòng.
+## 3. Phân công nhóm 3 thành viên
 
-## Checklist trước khi nộp
+| Thành viên | Phần việc chính | File/evidence cần bàn giao |
+|---|---|---|
+| Đào Văn Đạt | Điều phối pipeline; tạo dataset-v3; chạy tutor; code checks; chạy Judge; tổng hợp calibration; viết report cá nhân | `dataset.jsonl`, `results-v3.jsonl`, `verdicts-v1/v2/v3.jsonl`, `REPORT.md`, `labels-final.csv` |
+| Nguyễn Minh Quân | Chấm độc lập output trên report; ghi nhận các case pass/fail/uncertain; nêu lý do các case bất đồng | `labels_quan.csv` và note đánh giá riêng |
+| Vũ Đình Huy | Chấm độc lập output trên report; kiểm tra groundedness, scope, citation; nêu các case cần thảo luận | `labels_Huy.csv` và note đánh giá riêng |
 
-- [ ] `deliverables/REPORT.md` đủ 7 mục (1 Input Grid … 7 Verdict); mục nào cũng có phần **quyết định + vì sao**
-- [ ] `deliverables/evidence/` có đủ data thô của mọi bước: dataset, results, labels, judge prompts
-      từng vòng, verdicts từng vòng, link Braintrust/LangSmith (trace mọi run)
-- [ ] Số liệu trong REPORT.md khớp với data trong deliverables/evidence/ (kiểm chứng được)
-- [ ] Verdict có đủ 5 phần report và một quyết định rõ ràng
-- [ ] `ai-support-log.md` là của chính người nộp
+## 4. Quy trình tôi đã thực hiện
 
-## Gợi ý
+1. Đọc README và xác định 6 phase của eval loop.
+2. Thiết kế dataset theo từng version và quyết định dataset_backup.jsonl gồm 25 câu, bao phủ in-scope, unclear, out-of-scope, challenge, high-risk và adversarial.
+3. Chạy tutor bằng `eval/run_eval.py`, lưu output vào `results-v3.jsonl`.
+4. Chạy `eval/code_checks.py` để kiểm tra schema, citation và quote.
+5. Mỗi thành viên chấm độc lập trên report và xuất file labels riêng.
+6. Chạy `eval/agreement.py`, tổng hợp nhãn theo đa số 2/3.
+7. Chạy LLM Judge qua các vòng calibration v1, v2, v3.
+8. So sánh Judge với nhãn người bằng confusion matrix và agreement.
+9. Human adjudication các case còn lệch; cập nhật `labels.csv` và `labels-final.csv`.
+10. Viết `REPORT.md`, `ai-support-log.md` và quyết định gate.
 
-- Mỗi mục trong `deliverables/REPORT.md` đã có sẵn khung câu hỏi dẫn — trả lời ngắn, dẫn chứng
-  bằng số/file thật trong `evidence/`, đừng viết chung chung.
-- Chạy xong một vòng là copy file ngay vào `evidence/` — để cuối buổi mới gom là mất.
+## 5. Kết quả tóm tắt
+
+- Dataset: 25 scenario.
+- Nhãn cuối: 12 pass, 3 fail, 10 uncertain.
+- Judge v3 agreement sau adjudication: 21/25 = 84%.
+- Tutor cost: khoảng `$0.021926` cho 25 câu.
+- Latency trung bình: 5.11 giây/câu.
+- Quyết định gate: **HOLD** vì có 3 fail và tỷ lệ uncertain còn 40%.
+
+## 6. Cấu trúc deliverables
+
+- `REPORT.md`: báo cáo cá nhân theo 7 phase.
+- `ai-support-log.md`: các bước AI hỗ trợ và phần tôi kiểm chứng/quyết định.
+- `evidence/`: dataset, results, labels, prompts và verdicts của từng vòng.
+- `report.html`, `report-v3.html`: report cá nhân, không chỉnh sửa và không dùng làm file bàn giao chung.
