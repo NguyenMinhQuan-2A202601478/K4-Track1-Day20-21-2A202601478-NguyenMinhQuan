@@ -1,8 +1,14 @@
-"""Chấm results.jsonl bằng LLM judge -> verdicts.jsonl, rồi đối chiếu labels.csv.
+"""Chấm results.jsonl bằng LLM judge rồi đối chiếu nhãn người.
 
 Cách dùng (chạy từ root repo):
   python3 eval/judge.py                # chấm tất cả các row
   python3 eval/judge.py sc-01 sc-03    # chỉ chấm các scenario_id được chọn
+
+Chạy một tiêu chí riêng không ghi đè output mặc định:
+  EVAL_JUDGE_PROMPT_PATH=eval/judge-prompt-grounded_v1.md \
+  EVAL_LABELS_PATH=labels-grounded.csv \
+  EVAL_VERDICTS_PATH=deliverables/evidence/verdicts-grounded-v1.jsonl \
+  python3 eval/judge.py
 Judge dùng prompt trong eval/judge_prompt.md (placeholder {{input}} {{answer}} {{sources}}).
 Model judge mặc định khác model tutor (EVAL_JUDGE_MODEL, mặc định openai/gpt-4o-mini)
 để tránh tự chấm chéo cùng một model.
@@ -16,13 +22,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tutor"))
 import tutor
 import tracing
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 # --- Tracing (tuỳ chọn): Braintrust hoặc LangSmith, log mỗi verdict thành 1 trace
 _tracer = tracing.init_tracer()
 
 JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "openai/gpt-4o-mini")
+ALLOWED_VERDICTS = {"pass", "fail", "uncertain"}
 
-# judge_prompt.md nằm cạnh file này trong eval/ — resolve theo __file__, không theo cwd
-PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "judge_prompt.md")
+# Có thể override ba file này để chạy nhiều judge theo tiêu chí mà không ghi đè nhau.
+# Prompt mặc định vẫn giữ nguyên workflow cũ của bài lab.
+DEFAULT_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "judge_prompt.md")
+PROMPT_PATH = os.environ.get("EVAL_JUDGE_PROMPT_PATH", DEFAULT_PROMPT_PATH)
+LABELS_PATH = os.environ.get("EVAL_LABELS_PATH", "labels.csv")
+VERDICTS_PATH = os.environ.get("EVAL_VERDICTS_PATH", "verdicts.jsonl")
 
 def read_jsonl(path):
     if not os.path.exists(path):
@@ -58,9 +72,17 @@ def judge_row(rec, template):
                                model=JUDGE_MODEL, max_tokens=500)
     content = data["choices"][0]["message"]["content"]
     out = tutor.parse_json_content(content)
-    return {"scenario_id": rec["scenario_id"], "verdict": out.get("verdict", "uncertain"),
-            "score": out.get("score"), "rationale": out.get("rationale", ""),
-            "issues": out.get("issues", []), "raw_content": content,
+    verdict = str(out.get("verdict", "uncertain")).strip().lower()
+    issues = out.get("issues", [])
+    rationale = out.get("rationale", "")
+    if verdict not in ALLOWED_VERDICTS:
+        issues = list(issues) if isinstance(issues, list) else [str(issues)]
+        issues.append(f"judge trả verdict ngoài contract: {verdict!r}")
+        rationale = (f"[Verdict ngoài contract {verdict!r} -> uncertain] " + rationale).strip()
+        verdict = "uncertain"
+    return {"scenario_id": rec["scenario_id"], "verdict": verdict,
+            "score": out.get("score"), "rationale": rationale,
+            "issues": issues, "raw_content": content,
             "usage": data.get("usage", {}), "latency_s": round(latency, 2)}
 
 def print_confusion(verdicts, labels):
@@ -112,14 +134,15 @@ def main():
             print("LỖI: %s" % e)
         verdicts.append(v)
 
-    with open("verdicts.jsonl", "w", encoding="utf-8") as f:
+    Path(VERDICTS_PATH).parent.mkdir(parents=True, exist_ok=True)
+    with open(VERDICTS_PATH, "w", encoding="utf-8") as f:
         for v in verdicts:
             f.write(json.dumps(v, ensure_ascii=False) + "\n")
-    print("Ghi %d verdict vào verdicts.jsonl" % len(verdicts))
+    print("Ghi %d verdict vào %s" % (len(verdicts), VERDICTS_PATH))
     if _tracer.backend:
         _tracer.flush()
         print("Đã log %d trace judge lên %s." % (len(verdicts), _tracer.backend))
-    print_confusion(verdicts, read_labels())
+    print_confusion(verdicts, read_labels(LABELS_PATH))
 
 if __name__ == "__main__":
     main()

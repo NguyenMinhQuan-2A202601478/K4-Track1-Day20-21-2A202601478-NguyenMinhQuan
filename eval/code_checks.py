@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 # Windows PowerShell có thể dùng cp1258, không in được một số ký tự tiếng Việt khi
-# output được pipe qua Tee-Object. Giữ output của evidence luôn là UTF-8.
+# output được pipe hoặc lưu evidence. Luôn phát output UTF-8.
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -70,10 +70,35 @@ def check_quote_verbatim(rec, section_tokens):
     return True, None
 
 
+def check_scope_matches_expected(rec, expected_scopes):
+    """Scope tutor trả về phải khớp expectation đã ghi trước trong dataset."""
+    expected = expected_scopes.get(rec.get("scenario_id"))
+    actual = (rec.get("output") or {}).get("scope")
+    if not expected:
+        return None, "không tìm thấy expected_scope cho scenario"
+    if actual != expected:
+        return False, f"scope là {actual!r}, kỳ vọng {expected!r}"
+    return True, None
+
+
+def check_in_scope_has_sources(rec, _):
+    """Contract tutor: output in_scope phải có ít nhất một source."""
+    out = rec.get("output") or {}
+    if out.get("_parse_error"):
+        return None, "bỏ qua (JSON vỡ)"
+    if out.get("scope") != "in_scope":
+        return True, None
+    if not out.get("sources"):
+        return False, "in_scope nhưng sources rỗng"
+    return True, None
+
+
 CHECKS = [  # thêm check của nhóm vào đây
     ("schema_valid", check_schema),
     ("citation_exists", check_citation_exists),
     ("quote_verbatim", check_quote_verbatim),
+    ("scope_matches_expected", check_scope_matches_expected),
+    ("in_scope_has_sources", check_in_scope_has_sources),
 ]
 
 
@@ -81,6 +106,15 @@ def main(path="results.jsonl"):
     if not os.path.exists(path):
         raise SystemExit("Không thấy %s — chạy python3 eval/run_eval.py trước." % path)
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+
+    # results.jsonl chỉ giữ input/output; expected_scope nằm ở dataset.jsonl.
+    # Lấy expectation theo scenario_id để check không phụ thuộc việc runner có copy
+    # metadata dataset vào results hay không.
+    dataset_path = Path(path).with_name("dataset.jsonl")
+    if not dataset_path.exists():
+        dataset_path = Path("dataset.jsonl")
+    dataset_rows = [json.loads(l) for l in open(dataset_path, encoding="utf-8") if l.strip()]
+    expected_scopes = {r.get("scenario_id"): r.get("expected_scope") for r in dataset_rows}
 
     sections = tutor.load_corpus()
     valid_ids = {(s["doc_id"], s["section_id"]) for s in sections}
@@ -95,6 +129,8 @@ def main(path="results.jsonl"):
                 ok, reason = fn(rec)
             elif fn is check_citation_exists:
                 ok, reason = fn(rec, valid_ids)
+            elif fn is check_scope_matches_expected:
+                ok, reason = fn(rec, expected_scopes)
             else:
                 ok, reason = fn(rec, section_tokens)
             if ok is None:

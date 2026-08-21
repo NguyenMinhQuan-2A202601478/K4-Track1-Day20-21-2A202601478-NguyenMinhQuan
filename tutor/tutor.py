@@ -98,7 +98,11 @@ def resolve_provider(model):
             + ", ".join(PROVIDERS)
             + " — hoặc đặt EVAL_BASE_URL trỏ về gateway OpenAI-compatible của bạn.")
     env_name, base = PROVIDERS[family]
-    return base, os.environ.get(env_name), model[len(family) + 1:]
+    # Model có prefix: "openai/gpt-..." -> gửi phần sau dấu /.
+    # Model không prefix được hiểu là OpenAI và phải giữ nguyên; trước đây code
+    # vẫn cắt 7 ký tự của "gpt-...", biến "gpt-5.4-mini" thành "-mini".
+    model_id = model.split("/", 1)[1] if "/" in model else model
+    return base, os.environ.get(env_name), model_id
 
 def get_api_key(model=MODEL):
     """Key theo family của model (openai/gpt-... -> OPENAI_API_KEY...)."""
@@ -191,7 +195,13 @@ def chat(messages, model=None, temperature=0, max_tokens=800, tools=None):
             "của thư mục eval-kit rồi chạy lại.\n"
             "(Muốn đi qua gateway riêng? Đặt EVAL_BASE_URL + EVAL_API_KEY.)")
     payload = {"model": model_id, "messages": messages,
-               "temperature": temperature, "max_tokens": max_tokens}
+               "temperature": temperature}
+    # GPT-5 Chat Completions không nhận `max_tokens`; API yêu cầu
+    # `max_completion_tokens`. Các provider/model cũ tiếp tục dùng tên cũ.
+    if model.startswith("openai/gpt-5"):
+        payload["max_completion_tokens"] = max_tokens
+    else:
+        payload["max_tokens"] = max_tokens
     if "deepseek-v4" in model:  # bắt buộc với deepseek v4: tắt thinking, nếu không mất output
         payload["thinking"] = {"type": "disabled"}
     # ép JSON: đo thực tế ~20% response không có cờ này bị vỡ JSON giữa chừng.
@@ -209,7 +219,14 @@ def chat(messages, model=None, temperature=0, max_tokens=800, tools=None):
     for attempt in range(3):  # gateway/provider thỉnh thoảng trả body JSON bị cắt ngang (200 nhưng không parse được) — retry
         resp = requests.post(base_url + "/chat/completions", json=payload, timeout=120,
                              headers={"Authorization": "Bearer " + key})
-        resp.raise_for_status()
+        if not resp.ok:
+            # requests.HTTPError chỉ hiện status/url, làm mất thông báo hữu ích từ
+            # provider (ví dụ model ID không tồn tại hoặc field không tương thích).
+            # Body được giới hạn để log vẫn đọc được và không chứa Authorization key.
+            detail = resp.text[:1200].replace("\n", " ")
+            raise RuntimeError(
+                "Provider %s trả HTTP %s: %s" % (model, resp.status_code, detail)
+            )
         try:
             return resp.json(), time.time() - t0
         except ValueError as e:

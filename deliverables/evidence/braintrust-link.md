@@ -1,9 +1,5 @@
-# Trace project link
+# Braintrust Trace
 
-> TODO before submission: paste the URL of the Braintrust or LangSmith project that contains the tutor and judge traces for this evaluation run.
+Project: `track1-day21-2A202601478`
+[Braintrust — Track 1 Day 21 Logs](https://www.braintrust.dev/app/Henry%20Ng/p/track1-day21-2A202601478/logs)
 
-- Provider: TODO
-- Project URL: TODO
-- Dataset/eval version: v3
-- Recorded by: TODO
-- Date: TODO
